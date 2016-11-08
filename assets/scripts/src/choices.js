@@ -381,8 +381,7 @@ class Choices {
       // Choices
       if (this.currentState.choices !== this.prevState.choices ||
         this.currentState.groups !== this.prevState.groups) {
-        if (this.passedElement.type === 'select-multiple' ||
-            this.passedElement.type === 'select-one') {
+        if (!this.isTextElement) {
           // Get active groups/choices
           const activeGroups = this.store.getGroupsFilteredByActive();
           const activeChoices = this.store.getChoicesFilteredByActive();
@@ -407,10 +406,16 @@ class Choices {
             this.choiceList.appendChild(choiceListFragment);
             this._highlightChoice();
           } else {
-            // Otherwise show a notice
-            const dropdownItem = this.isSearching ?
-              this._getTemplate('notice', this.config.noResultsText) :
-              this._getTemplate('notice', this.config.noChoicesText);
+            const activeItems = this.store.getItemsFilteredByActive();
+            const canAddItem = this._canAddItem(activeItems, this.input.value);
+            let dropdownItem = this._getTemplate('notice', this.config.noChoicesText);
+
+            if (canAddItem.notice) {
+              dropdownItem = this._getTemplate('notice', canAddItem.notice);
+            } else if (this.isSearching) {
+              dropdownItem = this._getTemplate('notice', this.config.noResultsText);
+            }
+
             this.choiceList.appendChild(dropdownItem);
           }
         }
@@ -1040,7 +1045,7 @@ class Choices {
       }
     }
 
-    if (this.passedElement.type === 'text' && this.config.addItems) {
+    if (this.config.addItems) {
       const isUnique = !activeItems.some((item) => item.value === value.trim());
 
       // If a user has supplied a regular expression filter
@@ -1147,7 +1152,8 @@ class Choices {
       this.currentValue = newValue;
       this.highlightPosition = 0;
       this.isSearching = true;
-      this.store.dispatch(filterChoices(results));
+
+      return results;
     }
   }
 
@@ -1172,6 +1178,20 @@ class Choices {
         triggerEvent(this.passedElement, 'search', {
           value,
         });
+
+        const results = this._searchChoices(value);
+        if (results) {
+          this.store.dispatch(filterChoices(results));
+        }
+
+        // Run callback if it is a function
+        if (callback) {
+          if (isType('Function', callback)) {
+            callback.call(this, value);
+          } else {
+            console.error('callbackOnSearch: Callback is not a function');
+          }
+        }
       } else if (hasUnactiveChoices) {
         // Otherwise reset choices to active
         this.isSearching = false;
@@ -1295,7 +1315,7 @@ class Choices {
 
     const onEnterKey = () => {
       // If enter key is pressed and the input has a value
-      if (passedElementType === 'text' && target.value) {
+      if (target.value) {
         const value = this.input.value;
         const canAddItem = this._canAddItem(activeItems, value);
 
@@ -1304,7 +1324,14 @@ class Choices {
           if (hasActiveDropdown) {
             this.hideDropdown();
           }
-          this._addItem(value);
+
+          if (this.isTextElement) {
+            this._addItem(value);
+          } else {
+            this._addChoice(true, false, value, value);
+            console.log(this.store.getState());
+          }
+
           this._triggerChange(value);
           this.clearInput(this.passedElement);
         }
