@@ -1320,6 +1320,7 @@ class Choices {
 
       if (hasActiveDropdown && highlighted) {
         // If we have a highlighted choice, select it
+        e.preventDefault();
         this._handleChoiceAction(activeItems, highlighted);
       } else if (passedElementType === 'select-one') {
         // Open single select dropdown if it's not active
