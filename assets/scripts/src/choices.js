@@ -981,10 +981,9 @@ class Choices {
 
       if (canAddItem.response) {
         this._addItem(choice.value, choice.label, choice.id, choice.groupId);
-        this._triggerChange(choice.value);
       }
     }
-
+    this._triggerChange(choice.value);
     this.clearInput(this.passedElement);
 
     // We wont to close the dropdown if we are dealing with a single select box
